@@ -10,40 +10,56 @@ This repo solves that by implementing a **Transport Adapter Pattern**: a single 
 
 ## Architecture
 
+```mermaid
+graph TB
+    subgraph Core["Agent Core"]
+        AGENT[Strands Agent + BedrockModel<br/>Prompt injection defense<br/>Session pinning<br/>Heartbeat streaming<br/>Tool registry]
+    end
+
+    subgraph Transports["4 Transport Adapters"]
+        AGUI[AG-UI<br/>FastAPI SSE<br/>State sync<br/>Tool proxy]
+        SLACK[Slack<br/>SQS → Lambda<br/>SigV4 auth<br/>Thread sessions<br/>File upload]
+        MCP_T[MCP<br/>stdio server<br/>Write safety<br/>Log analysis<br/>SigV4 invocation]
+        API_T[REST API<br/>Lambda / FastAPI<br/>Automation hooks]
+    end
+
+    subgraph Surfaces["User Interfaces"]
+        WEB[Web Browser<br/>React / Next.js]
+        SLACK_APP[Slack App]
+        IDE[IDE Extensions<br/>Cline / Cursor]
+        AUTO[Automation<br/>CI/CD / Webhooks]
+    end
+
+    AGENT -->|stream_async| AGUI & SLACK & MCP_T & API_T
+    AGUI --> WEB
+    SLACK --> SLACK_APP
+    MCP_T --> IDE
+    API_T --> AUTO
 ```
-                    ┌──────────────────────────────┐
-                    │        Agent Core             │
-                    │  Strands Agent + BedrockModel  │
-                    │  • Prompt injection defense    │
-                    │  • Session pinning             │
-                    │  • Heartbeat streaming          │
-                    │  • Tool registry                │
-                    └──────────┬───────────────────┘
-                               │ stream_async()
-            ┌──────────────────┼──────────────────────┐
-            │                  │                      │
-     ┌──────▼──────┐   ┌──────▼──────┐   ┌──────────▼────────┐
-     │   AG-UI     │   │   Slack     │   │       MCP          │
-     │ Transport   │   │ Transport   │   │   Transport        │
-     │             │   │             │   │                    │
-     │ FastAPI SSE │   │ SQS→Lambda  │   │ stdio server       │
-     │ RunAgent    │   │ SigV4 auth  │   │ 4 tools            │
-     │ Input/Event │   │ Thread sess │   │ Write safety       │
-     │ State sync  │   │ File upload │   │ SigV4 invocation   │
-     │ Tool proxy  │   │ Chunked msg │   │ Log analysis       │
-     └─────────────┘   └─────────────┘   └───────────────────┘
-            │                  │                      │
-     ┌──────▼──────┐   ┌──────▼──────┐   ┌──────────▼────────┐
-     │ Web Browser │   │   Slack     │   │  IDE Extensions    │
-     │ React/Next  │   │   App       │   │  Cline / Cursor    │
-     └─────────────┘   └─────────────┘   └───────────────────┘
-                                                    │
-                                          ┌─────────▼─────────┐
-                                          │    REST API        │
-                                          │  Lambda / FastAPI  │
-                                          │  Automation hooks  │
-                                          └───────────────────┘
+
+## AgentCore Runtime Architecture
+
+```mermaid
+graph LR
+    IAM[IAM Role] --> VPC
+
+    subgraph VPC["VPC"]
+        ECR[ECR<br/>Container Image] --> RUNTIME[AgentCore<br/>Runtime]
+        RUNTIME -->|Guardrail| BEDROCK[Bedrock<br/>Foundation Model]
+        RUNTIME -->|Guardrail| MEMORY[Memory<br/>Long-term & Short-term]
+        RUNTIME -->|Guardrail| GATEWAY[Gateway]
+    end
+
+    CMK1[CM-CMK] --> MEMORY
+    CMK2[CM-CMK] --> GATEWAY
+    GATEWAY --> TARGET[Gateway<br/>Target]
+    TARGET --> TOOL[Tool<br/>Lambda]
 ```
+
+The agent runs as a containerized runtime within a VPC. Three guardrail layers enforce security between the runtime and downstream services:
+- **Bedrock**: Foundation model invocations (Claude Sonnet 4) with token limits and content filtering
+- **Memory**: Long-term (DynamoDB) and short-term (in-container) conversation history, encrypted with Customer Managed Keys
+- **Gateway**: External tool invocations routed through gateway targets to Lambda-based tools, encrypted with CM-CMK
 
 ## Transport Interfaces
 
