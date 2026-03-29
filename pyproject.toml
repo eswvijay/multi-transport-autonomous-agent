@@ -1,0 +1,28 @@
+[project]
+name = "multi-transport-autonomous-agent"
+version = "1.0.0"
+description = "Autonomous AI agent accessible through 4 transport interfaces: AG-UI (web frontend), Slack bot, MCP (IDE), and REST API"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+dependencies = [
+    "strands-agents>=0.1.0",
+    "strands-agents-tools>=0.1.0",
+    "ag-ui-core>=0.1.0",
+    "ag-ui-encoder>=0.1.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "boto3>=1.35.0",
+    "pydantic>=2.0.0",
+    "slack-bolt>=1.21.0",
+    "slack-sdk>=3.33.0",
+    "aws-lambda-powertools>=3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.13",
+    "ruff>=0.8",
+]

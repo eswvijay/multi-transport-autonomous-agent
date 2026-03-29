@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+dist/
+*.egg-info/
+.DS_Store
+node_modules/
+cdk.out/
+.cdk.staging/
+*.js.map
+*.d.ts
